@@ -5,9 +5,9 @@ app = Flask('TP3')
 
 def main():
     #port = int(sys.argv[1])
-    Netfile = open(sys.argv[1], "r")
-    #Ixfile = open(sys.argv[3], "r")
-    #Netixlanfile = open(sys.argv[4], "r")
+    NetFile = open(sys.argv[1], "r")
+    IxFile = open(sys.argv[3], "r")
+    NetIxlanFile = open(sys.argv[4], "r")
 
     Netfile_data = Netfile.read()
     Netfile_json = json.loads(Netfile_data)
