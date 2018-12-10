@@ -25,133 +25,102 @@ def main():
 
     if Opt is 1:
         s.send("GET /api/ix HTTP/1.1\r\n\r\n".encode("utf-8"))
-        
-        ix = []
-        i = 0
-        
+
+        ix = ""
+
         while True:
-            resp = s.recv(32000).decode("utf-8").split('\r\n\r\n')
-            if resp == [""]:
+            resp = s.recv(1024).decode("utf-8")
+            if resp == "":
                 break
-            if len(resp) > 1:
-                ix.append(resp[1])
-            elif i >= 2:
-                if len(ix) >= 1:
-                    ix[0] += resp[0]
-                else:
-                    ix.append(resp[0])
-            i += 1
+            ix += resp
+        ix = ix.split('\r\n\r\n')
 
-        ix_json = json.loads(ix[0])
-
+        ix_json = json.loads(ix[1])
+        
         all_net_ids = []
-        net_ix_lan_by_ixId = {}
+        netIxLan_by_ixId = {}
         net_id_sum = {}
 
         # get net ids
         for item in ix_json:
+            ix_id = item["id"]
             s = close_open_socket(s, ip, port)
-            s.send(("GET /api/ixnets/{0}/ HTTP/1.1\r\n\r\n".format(item)).encode("utf-8"))
+            s.send(("GET /api/ixnets/{0}/ HTTP/1.1\r\n\r\n".format(ix_id)).encode("utf-8"))
             
-            net_ix_lan = []
-            i = 0
+            netIxLan = ""
             
             while True:
-                resp = s.recv(32000).decode("utf-8").split('\r\n\r\n')
-                if resp == [""]:
+                resp = s.recv(1024).decode("utf-8")
+                if resp == "":
                     break
-                if len(resp) > 1:
-                    net_ix_lan.append(resp[1])
-                elif i >= 2:
-                    if len(net_ix_lan) >= 1:
-                        net_ix_lan[0] += resp[0]
-                    else:
-                        net_ix_lan.append(resp[0])
-                i += 1
+                netIxLan += resp
+            netIxLan = netIxLan.split('\r\n\r\n')
+
+            netIxLan_json = json.loads(netIxLan[1])
+            netIxLan_by_ixId[ix_id] = netIxLan_json
             
-            net_ix_lan_json = json.loads(net_ix_lan[0])
-            net_ix_lan_by_ixId[item] = net_ix_lan_json
-            
-            for item in net_ix_lan_json:
-                if item["net_id"] not in all_net_ids:
-                    all_net_ids.append(item["net_id"])
-                if item["net_id"] in net_id_sum.keys():
-                    net_id_sum[item["net_id"]] += 1
-                elif item["net_id"] not in net_id_sum.keys():
-                    net_id_sum[item["net_id"]] = 1
-            
-        for item in all_net_ids:
+            for netIxLan in netIxLan_json:
+                net_id = netIxLan["net_id"]
+                ix_id = netIxLan["ix_id"]
+                if net_id not in net_id_sum.keys():
+                    net_id_sum[net_id] = {'count': 1, 'ix_ids': [ix_id]}
+                elif ix_id not in net_id_sum[net_id]['ix_ids']:
+                    net_id_sum[net_id]['count'] += 1
+                    net_id_sum[net_id]['ix_ids'].append(ix_id)
+
+        for netId in net_id_sum.keys():
             s = close_open_socket(s, ip, port)
-            s.send(("GET /api/netname/{0}/ HTTP/1.1\r\n\r\n".format(item)).encode("utf-8"))
+            s.send(("GET /api/netname/{0}/ HTTP/1.1\r\n\r\n".format(netId)).encode("utf-8"))
             
-            net_names = []
-            i = 0
+            net_names = ""
 
             while True:
-                resp = s.recv(1024).decode("utf-8").split('\r\n\r\n')
-                if resp == [""]:
+                resp = s.recv(1024).decode("utf-8")
+                if resp == "":
                     break
-                if len(resp) > 1:
-                    net_names.append(resp[1])
-                elif i >= 2:
-                    if len(net_names) >= 1:
-                        net_names[0] += resp[0]
-                    else:
-                        net_names.append(resp[0])
-                i += 1
+                net_names += resp
+            net_names = net_names.split('\r\n\r\n')
 
-            net_names_json = json.loads(net_names[0])
-            #print(str(item) + ' ' + net_names_json)
-            if item not in net_id_sum.keys():
-                print(str(item) + '\t' + net_names_json + '\t' + '0')
+            net_names_json = json.loads(net_names[1])
+            
+            if netId not in net_id_sum.keys():
+                print(str(netId) + '\t' + net_names_json.replace('"','') + '\t' + '0')
             else:
-                print(str(item) + '\t' + net_names_json + '\t' + str(net_id_sum[item]))
+                print(str(netId) + '\t' + net_names_json.replace('"','') + '\t' + str(net_id_sum[netId]['count']))
 
     ##### OPT 2 #####
     elif Opt is 2:
         s = close_open_socket(s, ip, port)
         s.send("GET /api/ix HTTP/1.1\r\n\r\n".encode("utf-8"))
-        all_ixs = []
-        i = 0
-        all_net_ids = []
+        
+        all_ixs = ""
+        
         while True:
             resp = s.recv(1024).decode("utf-8")
             if resp == "":
                 break
-            elif i > 2:
-                all_ixs[2] += resp
-            else:
-                all_ixs.append(resp)
-            i += 1
+            all_ixs += resp
+        all_ixs = all_ixs.split('\r\n\r\n')
 
-        all_ixs_json = json.loads(all_ixs[2])
+        all_ixs_json = json.loads(all_ixs[1])
         ix_names = []
 
         for item in all_ixs_json:
-            i = 0
-
             s = close_open_socket(s, ip, port)
             s.send(("GET /api/ixnets/{0}/ HTTP/1.1\r\n\r\n".format(item["id"])).encode("utf-8"))
             
-            ixnets = []
-            i = 0
+            ixnets = ""
             
             while True:
-                resp = s.recv(32000).decode("utf-8").split('\r\n\r\n')
-                
-                if resp == [""]:
+                resp = s.recv(1024).decode("utf-8")
+                if resp == "":
                     break
-                if len(resp) > 1:
-                    ixnets.append(resp[1])
-                elif i >= 2:
-                    if len(ixnets) >= 1:
-                        ixnets[0] += resp[0]
-                    else:
-                        ixnets.append(resp[0])
-                i += 1
-            
-            ixnets_json = json.loads(ixnets[0])
+                ixnets += resp
+            ixnets = ixnets.split('\r\n\r\n')
+
+            ixnets_json = json.loads(ixnets[1])
             different_nets = []
+
             for ixn in ixnets_json:
                 if ixn["net_id"] not in different_nets:
                     different_nets.append(ixn["net_id"])

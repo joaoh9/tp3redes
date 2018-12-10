@@ -57,9 +57,7 @@ def main():
         resp.headers['Size_of_payload'] = sys.getsizeof(js)
         return resp
 
-    app.run(use_reloader=True )
-
-
+    app.run("0.0.0.0", port)
 
 if __name__ == "__main__":
     main()
